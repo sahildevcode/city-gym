@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { 
   Dumbbell, 
   Users, 
@@ -21,7 +22,12 @@ import {
   Check,
   Settings,
   Plus,
-  Save
+  Save,
+  Printer,
+  Download,
+  X,
+  UserPlus,
+  Calendar
 } from 'lucide-react';
 import { gsap } from 'gsap';
 import { GymSettings, Plan } from '@/lib/settings';
@@ -29,6 +35,8 @@ import { Member } from '@/lib/db';
 
 export default function AdminDashboardPage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const printQrRef = useRef<HTMLDivElement>(null);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -46,6 +54,32 @@ export default function AdminDashboardPage() {
   const [settings, setSettings] = useState<GymSettings | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState('');
+
+  // Modals state
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [showDirectMemberModal, setShowDirectMemberModal] = useState(false);
+
+  // Direct Member Add Form State (Counter Registration by Admin)
+  const [directName, setDirectName] = useState('');
+  const [directPhone, setDirectPhone] = useState('');
+  const [directAge, setDirectAge] = useState('');
+  const [directWeight, setDirectWeight] = useState('');
+  const [directStartDate, setDirectStartDate] = useState('');
+  const [directPlanId, setDirectPlanId] = useState('1m');
+  const [directCustomDays, setDirectCustomDays] = useState(30);
+  const [directIsCustom, setDirectIsCustom] = useState(false);
+  const [directPaymentMode, setDirectPaymentMode] = useState<'CASH' | 'UPI' | 'CARD'>('CASH');
+  const [directIsSubmitting, setDirectIsSubmitting] = useState(false);
+
+  // Get current Origin/URL for QR code
+  const [clientUrl, setClientUrl] = useState('');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setClientUrl(window.location.origin);
+      const today = new Date().toISOString().split('T')[0];
+      setDirectStartDate(today);
+    }
+  }, []);
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -175,11 +209,82 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Update specific plan price
   const handlePlanPriceChange = (planId: string, newPrice: number) => {
     if (!settings) return;
     const updatedPlans = settings.plans.map(p => p.id === planId ? { ...p, price: newPrice } : p);
     setSettings({ ...settings, plans: updatedPlans });
+  };
+
+  // Direct Admin Member Submission (Instant Activated)
+  const handleDirectMemberSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!directName.trim()) return alert('Member ka naam enter karein!');
+    if (!directPhone.trim() || directPhone.length < 10) return alert('10-digit mobile number daalein!');
+
+    setDirectIsSubmitting(true);
+    try {
+      const plans = settings?.plans || [];
+      const customRate = settings?.customDayRate || 50;
+      
+      let durationDays = 30;
+      let durationMonths = 1;
+      let amount = 1000;
+
+      if (directIsCustom) {
+        durationDays = Math.max(1, Number(directCustomDays) || 1);
+        durationMonths = Math.round((durationDays / 30) * 10) / 10;
+        amount = durationDays * customRate;
+      } else {
+        const found = plans.find(p => p.id === directPlanId) || plans[0];
+        if (found) {
+          durationDays = found.days;
+          durationMonths = found.months;
+          amount = found.price;
+        }
+      }
+
+      const payload = {
+        name: directName,
+        phone: directPhone,
+        age: directAge,
+        weight: directWeight,
+        startDate: directStartDate,
+        durationDays,
+        durationMonths,
+        amount,
+        paymentMethod: directPaymentMode,
+        utrNumber: `Counter-${directPaymentMode}`,
+        wantsDiet: false
+      };
+
+      const res = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        // Auto-approve since admin added it directly
+        await handleUpdateStatus(result.data.id, 'verified');
+        alert(`Success! ${directName} ki membership add ho gayi (ID: ${result.data.id})`);
+        setShowDirectMemberModal(false);
+        setDirectName('');
+        setDirectPhone('');
+        fetchMembers();
+      } else {
+        alert('Failed: ' + result.error);
+      }
+    } catch {
+      alert('Error occurred while adding member');
+    } finally {
+      setDirectIsSubmitting(false);
+    }
+  };
+
+  // Print QR Code Sheet
+  const handlePrintQr = () => {
+    window.print();
   };
 
   const totalRevenue = members
@@ -282,6 +387,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
+          {/* Action Buttons: Refresh, Client QR (Download/Print), and Direct Join Member */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => { fetchMembers(); fetchSettings(); }}
@@ -290,14 +396,24 @@ export default function AdminDashboardPage() {
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
             </button>
-            <a
-              href="/"
-              target="_blank"
-              className="text-xs bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/30 px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-bold transition shadow-sm"
+
+            {/* 1. Client QR Button -> Opens QR Modal for Download & Print */}
+            <button
+              onClick={() => setShowQrModal(true)}
+              className="text-xs bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-bold transition shadow-sm active:scale-[0.98]"
             >
               <QrCode className="w-4 h-4 text-amber-400" />
               <span>Client QR</span>
-            </a>
+            </button>
+
+            {/* 2. Join Membership Button -> Direct Admin Adding Client */}
+            <button
+              onClick={() => setShowDirectMemberModal(true)}
+              className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow-lg shadow-amber-500/20 active:scale-[0.98]"
+            >
+              <UserPlus className="w-4 h-4 stroke-[2.8]" />
+              <span>+ Join Membership</span>
+            </button>
           </div>
         </div>
       </header>
@@ -420,7 +536,7 @@ export default function AdminDashboardPage() {
               {filteredMembers.length === 0 ? (
                 <div className="glass-panel rounded-3xl p-8 text-center text-slate-400 text-xs">
                   <Users className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-                  Koi member record nahi mila. Client form bharte hi yahan live show hoga!
+                  Koi member record nahi mila. &quot;+ Join Membership&quot; dabakar direct add karein ya client ko QR scan karwayein!
                 </div>
               ) : (
                 filteredMembers.map((m) => {
@@ -450,11 +566,6 @@ export default function AdminDashboardPage() {
                             <span className="font-mono text-[10px] bg-slate-950 border border-slate-800 text-amber-400 px-2 py-0.5 rounded-lg font-bold">
                               {m.id}
                             </span>
-                            {m.wantsDiet && (
-                              <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                <Sparkles className="w-2.5 h-2.5" /> Diet
-                              </span>
-                            )}
                           </div>
                           <p className="text-xs text-slate-400 flex items-center gap-2 mt-1">
                             <span className="font-mono text-slate-300">📞 +91 {m.phone}</span>
@@ -547,7 +658,7 @@ export default function AdminDashboardPage() {
                   Membership Plans &amp; Fees Configuration
                 </h2>
                 <p className="text-xs text-slate-300 mt-0.5">
-                  Aap yahan jo fees set karenge, client ko QR scan karne par wahi fees dikhegi! (e.g. 1 Month = ₹10,000, 3 Months = ₹30,000)
+                  Aap yahan jo fees set karenge, client ko QR scan karne par wahi fees dikhegi!
                 </p>
               </div>
 
@@ -593,7 +704,7 @@ export default function AdminDashboardPage() {
                 <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-inner">
                   <div>
                     <span className="font-bold text-sm text-white block">Per Day Fee (Daily Pass)</span>
-                    <span className="text-[11px] text-slate-400">Agar koi 1 din, 2 din, ya 15 din choose karega toh is rate se calculate hoga</span>
+                    <span className="text-[11px] text-slate-400">Agar koi 1 din, 2 din, ya manpasand din choose karega toh is rate se calculate hoga</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-amber-400">₹</span>
@@ -643,6 +754,233 @@ export default function AdminDashboardPage() {
         )}
 
       </main>
+
+      {/* ================= MODAL 1: CLIENT QR CODE (PRINT & DOWNLOAD) ================= */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="max-w-sm w-full bg-slate-900 border border-amber-500/40 rounded-3xl p-6 text-center space-y-4 shadow-2xl relative">
+            <button
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
+                Gym Counter Standee
+              </span>
+              <h2 className="text-lg font-black text-white mt-2">Client QR Code</h2>
+              <p className="text-xs text-slate-400">
+                Isko print karke apne gym ke counter ya entrance par lagayein!
+              </p>
+            </div>
+
+            {/* Printable Frame */}
+            <div ref={printQrRef} className="bg-white p-5 rounded-3xl inline-block mx-auto border-4 border-amber-500/30 shadow-2xl">
+              <QRCodeSVG
+                value={clientUrl || 'http://localhost:3000'}
+                size={220}
+                level="H"
+                includeMargin={false}
+              />
+              <p className="text-[10px] font-extrabold text-slate-950 uppercase tracking-widest mt-2">
+                ⚡ SCAN TO JOIN CITY GYM
+              </p>
+            </div>
+
+            <div className="text-xs text-slate-400 font-mono break-all bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              {clientUrl || 'http://localhost:3000'}
+            </div>
+
+            {/* Print & Download Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handlePrintQr}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
+              >
+                <Printer className="w-4 h-4 stroke-[2.8]" />
+                <span>Print Standee</span>
+              </button>
+
+              <a
+                href={`https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(clientUrl || 'http://localhost:3000')}`}
+                download="CityGym-Counter-QR.png"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-700"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download HD</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL 2: DIRECT MEMBERSHIP ADD (JOIN MEMBERSHIP BUTTON) ================= */}
+      {showDirectMemberModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-500 text-slate-950">
+                  <UserPlus className="w-4 h-4 stroke-[2.8]" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base">Direct Member Entry</h3>
+                  <p className="text-xs text-slate-400">Admin counter par aate hi turant membership activate karein</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowDirectMemberModal(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleDirectMemberSubmit} className="space-y-3.5">
+              <div>
+                <label className="text-xs text-slate-300 font-semibold block mb-1">Customer Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Rahul Verma"
+                  value={directName}
+                  onChange={(e) => setDirectName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-semibold block mb-1">WhatsApp / Phone *</label>
+                <input
+                  type="tel"
+                  required
+                  maxLength={10}
+                  placeholder="9876543210"
+                  value={directPhone}
+                  onChange={(e) => setDirectPhone(e.target.value.replace(/\D/g, ''))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-300 font-semibold block mb-1">Age</label>
+                  <input
+                    type="number"
+                    placeholder="24"
+                    value={directAge}
+                    onChange={(e) => setDirectAge(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-300 font-semibold block mb-1">Weight (KG)</label>
+                  <input
+                    type="number"
+                    placeholder="70"
+                    value={directWeight}
+                    onChange={(e) => setDirectWeight(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-300 font-semibold block mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={directStartDate}
+                  onChange={(e) => setDirectStartDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-amber-500 [color-scheme:dark]"
+                />
+              </div>
+
+              {/* Plan Picker */}
+              <div>
+                <label className="text-xs text-slate-300 font-semibold block mb-1.5">Select Plan</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {settings?.plans.map(p => (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => { setDirectPlanId(p.id); setDirectIsCustom(false); }}
+                      className={`text-left p-2.5 rounded-xl border text-xs transition ${
+                        !directIsCustom && directPlanId === p.id
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
+                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                      }`}
+                    >
+                      <span className="block text-white font-bold">{p.name}</span>
+                      <span className="text-amber-400">₹{p.price.toLocaleString('en-IN')}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Days */}
+                <div className="mt-2 flex items-center justify-between p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={directIsCustom}
+                      onChange={(e) => setDirectIsCustom(e.target.checked)}
+                      className="rounded text-amber-500"
+                    />
+                    <span className="text-slate-300">Custom Days (₹{settings?.customDayRate || 50}/day)</span>
+                  </label>
+                  {directIsCustom && (
+                    <input
+                      type="number"
+                      min={1}
+                      value={directCustomDays}
+                      onChange={(e) => setDirectCustomDays(Math.max(1, Number(e.target.value)))}
+                      className="w-16 bg-slate-900 border border-slate-700 rounded-lg text-center text-amber-400 font-bold py-1"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Mode (Cash / Counter UPI) */}
+              <div>
+                <label className="text-xs text-slate-300 font-semibold block mb-1">Counter Payment Received In:</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['CASH', 'UPI', 'CARD'] as const).map(mode => (
+                    <button
+                      type="button"
+                      key={mode}
+                      onClick={() => setDirectPaymentMode(mode)}
+                      className={`py-2 text-xs font-bold rounded-xl border transition ${
+                        directPaymentMode === mode
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-black'
+                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={directIsSubmitting}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition disabled:opacity-50"
+                >
+                  <CheckCircle className="w-4 h-4 stroke-[2.8]" />
+                  <span>{directIsSubmitting ? 'Adding & Activating...' : 'Add & Activate Membership Now'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

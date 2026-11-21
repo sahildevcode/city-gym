@@ -71,7 +71,6 @@ export default function AdminDashboardPage() {
   const [directPaymentMode, setDirectPaymentMode] = useState<'CASH' | 'UPI' | 'CARD'>('CASH');
   const [directIsSubmitting, setDirectIsSubmitting] = useState(false);
 
-  // Get current Origin/URL for QR code
   const [clientUrl, setClientUrl] = useState('');
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -120,8 +119,8 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (isAuthenticated) {
       const ctx = gsap.context(() => {
-        gsap.from('.gsap-stat-card', { scale: 0.9, opacity: 0, duration: 0.6, stagger: 0.1, ease: 'back.out(1.5)' });
-        gsap.from('.gsap-member-card', { y: 20, opacity: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out' });
+        gsap.from('.gsap-stat-card', { scale: 0.9, opacity: 0, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)' });
+        gsap.from('.gsap-member-card', { y: 15, opacity: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out' });
       }, containerRef);
       return () => ctx.revert();
     }
@@ -185,7 +184,6 @@ export default function AdminDashboardPage() {
     window.open(url, '_blank');
   };
 
-  // Save Settings / Fees Changes
   const handleSaveSettings = async () => {
     if (!settings) return;
     setSavingSettings(true);
@@ -199,7 +197,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         setSettings(data.data);
-        setSaveSuccessMessage('Pricing & Settings Updated Live! Client portal me turant update ho gaya.');
+        setSaveSuccessMessage('Pricing & Settings Updated Live!');
         setTimeout(() => setSaveSuccessMessage(''), 4000);
       }
     } catch {
@@ -215,7 +213,6 @@ export default function AdminDashboardPage() {
     setSettings({ ...settings, plans: updatedPlans });
   };
 
-  // Direct Admin Member Submission (Instant Activated)
   const handleDirectMemberSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!directName.trim()) return alert('Member ka naam enter karein!');
@@ -265,7 +262,6 @@ export default function AdminDashboardPage() {
 
       const result = await res.json();
       if (result.success) {
-        // Auto-approve since admin added it directly
         await handleUpdateStatus(result.data.id, 'verified');
         alert(`Success! ${directName} ki membership add ho gayi (ID: ${result.data.id})`);
         setShowDirectMemberModal(false);
@@ -282,7 +278,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Print QR Code Sheet
   const handlePrintQr = () => {
     window.print();
   };
@@ -316,7 +311,7 @@ export default function AdminDashboardPage() {
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4 relative overflow-hidden font-sans">
         <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-amber-500/15 blur-[120px] pointer-events-none" />
 
-        <div className="max-w-sm w-full glass-panel border border-slate-800 rounded-3xl p-7 text-center space-y-4 shadow-2xl relative z-10">
+        <div className="max-w-sm w-full glass-panel border border-slate-800 rounded-3xl p-6 text-center space-y-4 shadow-2xl relative z-10">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-300 flex items-center justify-center text-slate-950 mx-auto shadow-xl shadow-amber-500/25">
             <Lock className="w-8 h-8 stroke-[2.8]" />
           </div>
@@ -362,166 +357,180 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div ref={containerRef} className="min-h-screen flex flex-col font-sans pb-20 relative overflow-x-hidden">
+    <div ref={containerRef} className="min-h-screen flex flex-col font-sans pb-20 relative overflow-x-hidden w-full max-w-full">
       
       {/* Background Decor */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/10 blur-[130px] pointer-events-none -z-10" />
 
-      {/* Header */}
-      <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-40 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/20">
-              <Dumbbell className="w-5 h-5 stroke-[2.8]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-black text-sm tracking-widest text-white uppercase font-['Cabinet_Grotesk',sans-serif]">
-                  CITY GYM ADMIN
-                </h1>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-black">
-                  LIVE
-                </span>
+      {/* Fully Mobile-Responsive Top Header */}
+      <header className="border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl sticky top-0 z-40 px-3 py-2.5 sm:px-4 sm:py-3 w-full">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+          
+          {/* Gym Branding */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/20 shrink-0">
+                <Dumbbell className="w-5 h-5 stroke-[2.8]" />
               </div>
-              <p className="text-[11px] text-slate-400">Mobile &amp; Counter Portal</p>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="font-black text-xs sm:text-sm tracking-wider text-white uppercase font-['Cabinet_Grotesk',sans-serif]">
+                    CITY GYM ADMIN
+                  </h1>
+                  <span className="text-[8px] sm:text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded-full font-black">
+                    LIVE
+                  </span>
+                </div>
+                <p className="text-[10px] sm:text-[11px] text-slate-400">Mobile &amp; Counter Portal</p>
+              </div>
             </div>
-          </div>
 
-          {/* Action Buttons: Refresh, Client QR (Download/Print), and Direct Join Member */}
-          <div className="flex items-center gap-2">
+            {/* Refresh button for small screens */}
             <button
               onClick={() => { fetchMembers(); fetchSettings(); }}
               title="Refresh Records"
-              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
+              className="sm:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-400' : ''}`} />
+            </button>
+          </div>
+
+          {/* Action Buttons: Perfectly Responsive Grid / Row on Mobile */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => { fetchMembers(); fetchSettings(); }}
+              title="Refresh Records"
+              className="hidden sm:flex p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition shrink-0"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
             </button>
 
-            {/* 1. Client QR Button -> Opens QR Modal for Download & Print */}
+            {/* Client QR Button */}
             <button
               onClick={() => setShowQrModal(true)}
-              className="text-xs bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 px-3.5 py-2 rounded-xl flex items-center gap-1.5 font-bold transition shadow-sm active:scale-[0.98]"
+              className="flex-1 sm:flex-initial text-[11px] sm:text-xs bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 font-bold transition shadow-sm active:scale-[0.98] whitespace-nowrap"
             >
-              <QrCode className="w-4 h-4 text-amber-400" />
+              <QrCode className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>Client QR</span>
             </button>
 
-            {/* 2. Join Membership Button -> Direct Admin Adding Client */}
+            {/* Join Membership Button */}
             <button
               onClick={() => setShowDirectMemberModal(true)}
-              className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow-lg shadow-amber-500/20 active:scale-[0.98]"
+              className="flex-1 sm:flex-initial text-[11px] sm:text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20 active:scale-[0.98] whitespace-nowrap"
             >
-              <UserPlus className="w-4 h-4 stroke-[2.8]" />
-              <span>+ Join Membership</span>
+              <UserPlus className="w-3.5 h-3.5 stroke-[2.8] shrink-0" />
+              <span>+ Join Member</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Admin Section */}
-      <main className="max-w-4xl mx-auto w-full p-4 space-y-4">
+      <main className="max-w-4xl mx-auto w-full p-3 sm:p-4 space-y-3.5 sm:space-y-4">
 
-        {/* Top Switcher: Members List vs Fees & Settings */}
-        <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
+        {/* Top Tab Switcher: Full width & responsive */}
+        <div className="grid grid-cols-2 gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
           <button
             onClick={() => setActiveTab('members')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${
+            className={`py-2 sm:py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all truncate ${
               activeTab === 'members'
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>Members &amp; Approvals ({members.length})</span>
+            <Users className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Members ({members.length})</span>
           </button>
           
           <button
             onClick={() => setActiveTab('pricing')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${
+            className={`py-2 sm:py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all truncate ${
               activeTab === 'pricing'
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Settings className="w-4 h-4" />
-            <span>Fees &amp; Plans Setting ⚙️</span>
+            <Settings className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Fees Setting ⚙️</span>
           </button>
         </div>
 
         {/* ================= TAB 1: MEMBERS MANAGEMENT ================= */}
         {activeTab === 'members' && (
-          <div className="space-y-4 animate-in fade-in">
-            {/* 4 Premium Metric Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="gsap-stat-card glass-panel rounded-3xl p-4 space-y-1 shadow-xl">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
+          <div className="space-y-3 sm:space-y-4 animate-in fade-in">
+            {/* 4 Responsive Metric Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+              <div className="gsap-stat-card glass-panel rounded-2xl sm:rounded-3xl p-3 sm:p-4 space-y-0.5 sm:space-y-1 shadow-xl">
+                <div className="flex items-center justify-between text-slate-400 text-[11px] sm:text-xs font-semibold">
                   <span>Total Members</span>
-                  <Users className="w-4 h-4 text-amber-400" />
+                  <Users className="w-3.5 h-3.5 text-amber-400" />
                 </div>
-                <p className="text-2xl font-black text-white">{members.length}</p>
-                <p className="text-[10px] text-slate-500">All registered profiles</p>
+                <p className="text-xl sm:text-2xl font-black text-white">{members.length}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500">All registered</p>
               </div>
 
-              <div className="gsap-stat-card glass-panel rounded-3xl p-4 space-y-1 shadow-xl border-emerald-500/20">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
-                  <span>Verified Revenue</span>
-                  <IndianRupee className="w-4 h-4 text-emerald-400" />
+              <div className="gsap-stat-card glass-panel rounded-2xl sm:rounded-3xl p-3 sm:p-4 space-y-0.5 sm:space-y-1 shadow-xl border-emerald-500/20">
+                <div className="flex items-center justify-between text-slate-400 text-[11px] sm:text-xs font-semibold">
+                  <span>Revenue</span>
+                  <IndianRupee className="w-3.5 h-3.5 text-emerald-400" />
                 </div>
-                <p className="text-2xl font-black text-emerald-400">₹{totalRevenue.toLocaleString('en-IN')}</p>
-                <p className="text-[10px] text-slate-500">Collected in Bank/UPI</p>
+                <p className="text-xl sm:text-2xl font-black text-emerald-400">₹{totalRevenue.toLocaleString('en-IN')}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500">Verified cash/UPI</p>
               </div>
 
-              <div className="gsap-stat-card glass-panel rounded-3xl p-4 space-y-1 shadow-xl border-amber-500/20">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
+              <div className="gsap-stat-card glass-panel rounded-2xl sm:rounded-3xl p-3 sm:p-4 space-y-0.5 sm:space-y-1 shadow-xl border-amber-500/20">
+                <div className="flex items-center justify-between text-slate-400 text-[11px] sm:text-xs font-semibold">
                   <span>Pending Action</span>
-                  <Clock className="w-4 h-4 text-amber-400" />
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
                 </div>
-                <p className="text-2xl font-black text-amber-400">{pendingPayments.length}</p>
-                <p className="text-[10px] text-slate-500">Awaiting approval</p>
+                <p className="text-xl sm:text-2xl font-black text-amber-400">{pendingPayments.length}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500">Awaiting approval</p>
               </div>
 
-              <div className="gsap-stat-card glass-panel rounded-3xl p-4 space-y-1 shadow-xl border-red-500/20">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
+              <div className="gsap-stat-card glass-panel rounded-2xl sm:rounded-3xl p-3 sm:p-4 space-y-0.5 sm:space-y-1 shadow-xl border-red-500/20">
+                <div className="flex items-center justify-between text-slate-400 text-[11px] sm:text-xs font-semibold">
                   <span>Expiring Soon</span>
-                  <AlertTriangle className="w-4 h-4 text-red-400" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
                 </div>
-                <p className="text-2xl font-black text-red-400">
+                <p className="text-xl sm:text-2xl font-black text-red-400">
                   {members.filter(m => {
                     const diffTime = new Date(m.endDate).getTime() - new Date().getTime();
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                     return diffDays <= 5 && diffDays >= 0;
                   }).length}
                 </p>
-                <p className="text-[10px] text-slate-500">In next 5 days</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500">In next 5 days</p>
               </div>
             </div>
 
             {/* Search & Filter Controls */}
-            <div className="glass-panel rounded-3xl p-3.5 space-y-3 shadow-xl">
+            <div className="glass-panel rounded-2xl sm:rounded-3xl p-3 space-y-2.5 shadow-xl">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                 <input
                   type="text"
                   placeholder="Search member by Name, Phone (+91), or Member ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition shadow-inner"
+                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition shadow-inner"
                 />
               </div>
 
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
+              {/* Horizontal Scrollable Filter Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
                 {[
-                  { id: 'all', label: `All Members (${members.length})` },
-                  { id: 'pending', label: `Pending Approvals (${pendingPayments.length})` },
-                  { id: 'verified', label: 'Active Members' },
-                  { id: 'expiring', label: 'Expiring in 5 Days' }
+                  { id: 'all', label: `All (${members.length})` },
+                  { id: 'pending', label: `Pending (${pendingPayments.length})` },
+                  { id: 'verified', label: 'Active' },
+                  { id: 'expiring', label: 'Expiring Soon' }
                 ].map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setFilterStatus(tab.id as any)}
-                    className={`px-3.5 py-2 rounded-xl whitespace-nowrap transition-all ${
+                    className={`px-3 py-1.5 rounded-xl whitespace-nowrap text-[11px] sm:text-xs transition-all ${
                       filterStatus === tab.id
-                        ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                         : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
@@ -534,9 +543,9 @@ export default function AdminDashboardPage() {
             {/* Members Cards List */}
             <div className="space-y-3">
               {filteredMembers.length === 0 ? (
-                <div className="glass-panel rounded-3xl p-8 text-center text-slate-400 text-xs">
-                  <Users className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-                  Koi member record nahi mila. &quot;+ Join Membership&quot; dabakar direct add karein ya client ko QR scan karwayein!
+                <div className="glass-panel rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center text-slate-400 text-xs">
+                  <Users className="w-8 h-8 sm:w-10 sm:h-10 text-slate-600 mx-auto mb-2" />
+                  Koi member record nahi mila. &quot;+ Join Member&quot; dabakar add karein ya Client QR scan karwayein!
                 </div>
               ) : (
                 filteredMembers.map((m) => {
@@ -547,10 +556,9 @@ export default function AdminDashboardPage() {
                   return (
                     <div
                       key={m.id}
-                      className="gsap-member-card glass-panel rounded-3xl p-4.5 space-y-3.5 relative overflow-hidden transition-all hover:border-slate-700 shadow-xl"
+                      className="gsap-member-card glass-panel rounded-2xl sm:rounded-3xl p-3.5 sm:p-4.5 space-y-3 relative overflow-hidden transition-all hover:border-slate-700 shadow-xl"
                     >
-                      {/* Status Strip */}
-                      <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+                      <div className={`absolute top-0 left-0 right-0 h-1 sm:h-1.5 ${
                         m.paymentStatus === 'verified'
                           ? isExpired ? 'bg-red-500' : 'bg-emerald-500'
                           : m.paymentStatus === 'pending'
@@ -559,34 +567,34 @@ export default function AdminDashboardPage() {
                       }`} />
 
                       {/* Header */}
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-black text-white text-base">{m.name}</h3>
-                            <span className="font-mono text-[10px] bg-slate-950 border border-slate-800 text-amber-400 px-2 py-0.5 rounded-lg font-bold">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="font-black text-white text-sm sm:text-base">{m.name}</h3>
+                            <span className="font-mono text-[9px] sm:text-[10px] bg-slate-950 border border-slate-800 text-amber-400 px-1.5 py-0.2 rounded-md font-bold">
                               {m.id}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-400 flex items-center gap-2 mt-1">
+                          <p className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
                             <span className="font-mono text-slate-300">📞 +91 {m.phone}</span>
-                            {m.age ? <span>• {m.age} Yrs</span> : null}
+                            {m.age ? <span>• {m.age} Y</span> : null}
                             {m.weight ? <span>• {m.weight} KG</span> : null}
                           </p>
                         </div>
 
-                        <div className="text-right">
-                          <span className="text-lg font-black text-white">₹{m.amount.toLocaleString('en-IN')}</span>
+                        <div className="text-right shrink-0">
+                          <span className="text-base sm:text-lg font-black text-white">₹{m.amount.toLocaleString('en-IN')}</span>
                           <div>
                             {m.paymentStatus === 'verified' ? (
-                              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2.5 py-0.5 rounded-full inline-block">
+                              <span className="text-[9px] sm:text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2 py-0.5 rounded-full inline-block">
                                 Verified ✓
                               </span>
                             ) : m.paymentStatus === 'pending' ? (
-                              <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold px-2.5 py-0.5 rounded-full inline-block animate-pulse">
-                                Pending Approval ⌛
+                              <span className="text-[9px] sm:text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold px-2 py-0.5 rounded-full inline-block animate-pulse">
+                                Pending ⌛
                               </span>
                             ) : (
-                              <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 font-bold px-2.5 py-0.5 rounded-full inline-block">
+                              <span className="text-[9px] sm:text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 font-bold px-2 py-0.5 rounded-full inline-block">
                                 Rejected
                               </span>
                             )}
@@ -595,44 +603,44 @@ export default function AdminDashboardPage() {
                       </div>
 
                       {/* Date Grid */}
-                      <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-3 grid grid-cols-2 gap-2 text-xs shadow-inner">
+                      <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2.5 grid grid-cols-2 gap-2 text-xs shadow-inner">
                         <div>
-                          <span className="text-[10px] text-slate-500 block uppercase font-bold">Start Date:</span>
-                          <span className="text-slate-300 font-semibold">{m.startDate}</span>
+                          <span className="text-[9px] text-slate-500 block uppercase font-bold">Start Date:</span>
+                          <span className="text-slate-300 font-semibold text-[11px] sm:text-xs">{m.startDate}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-500 block uppercase font-bold">End / Expiry:</span>
-                          <span className={`font-black ${isExpired ? 'text-red-400' : daysLeft <= 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                            {m.endDate} {isExpired ? '(Expired)' : `(${daysLeft} din baaki)`}
+                          <span className="text-[9px] text-slate-500 block uppercase font-bold">End / Expiry:</span>
+                          <span className={`font-black text-[11px] sm:text-xs ${isExpired ? 'text-red-400' : daysLeft <= 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {m.endDate} {isExpired ? '(Expired)' : `(${daysLeft} din)`}
                           </span>
                         </div>
                       </div>
 
-                      {/* Actions Bar */}
+                      {/* Responsive Actions Bar */}
                       <div className="flex items-center justify-between pt-1 gap-2">
                         <button
                           onClick={() => sendWhatsAppReminder(m)}
-                          className="text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition active:scale-[0.98]"
+                          className="flex-1 sm:flex-initial text-[11px] sm:text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 sm:py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
                         >
-                          <MessageSquare className="w-3.5 h-3.5" />
+                          <MessageSquare className="w-3.5 h-3.5 shrink-0" />
                           <span>WhatsApp Reminder</span>
                         </button>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           {m.paymentStatus !== 'verified' && (
                             <button
                               disabled={actionLoading === m.id}
                               onClick={() => handleUpdateStatus(m.id, 'verified')}
-                              className="text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-[0.98] shadow-md shadow-emerald-500/20"
+                              className="text-[11px] sm:text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3 py-1.5 sm:py-2 rounded-xl flex items-center gap-1 transition active:scale-[0.98] shadow-md shadow-emerald-500/20"
                             >
                               <CheckCircle className="w-3.5 h-3.5 stroke-[2.8]" />
-                              <span>Approve &amp; Activate</span>
+                              <span>Approve</span>
                             </button>
                           )}
 
                           <button
                             onClick={() => handleDeleteMember(m.id, m.name)}
-                            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-red-500/20 hover:border-red-500/30 text-slate-400 hover:text-red-400 transition"
+                            className="p-1.5 sm:p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-red-500/20 hover:border-red-500/30 text-slate-400 hover:text-red-400 transition"
                             title="Delete Record"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -650,14 +658,13 @@ export default function AdminDashboardPage() {
         {/* ================= TAB 2: FEES & PLANS SETTINGS ================= */}
         {activeTab === 'pricing' && settings && (
           <div className="space-y-4 animate-in fade-in">
-            
-            <div className="glass-panel rounded-3xl p-5 border border-amber-500/30 shadow-xl space-y-4">
+            <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-amber-500/30 shadow-xl space-y-4">
               <div>
-                <h2 className="text-base font-black text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-amber-400" />
+                <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                   Membership Plans &amp; Fees Configuration
                 </h2>
-                <p className="text-xs text-slate-300 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-300 mt-0.5">
                   Aap yahan jo fees set karenge, client ko QR scan karne par wahi fees dikhegi!
                 </p>
               </div>
@@ -670,25 +677,25 @@ export default function AdminDashboardPage() {
               )}
 
               {/* Plans Price Settings */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-3 pt-1">
                 <label className="text-xs font-extrabold uppercase text-amber-400 tracking-wider block">
                   Fixed Membership Plans Pricing:
                 </label>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {settings.plans.map((p) => (
-                    <div key={p.id} className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-inner">
+                    <div key={p.id} className="bg-slate-950/80 border border-slate-800 rounded-xl sm:rounded-2xl p-3 flex items-center justify-between gap-2 shadow-inner">
                       <div>
-                        <span className="font-bold text-sm text-white block">{p.name}</span>
-                        <span className="text-[11px] text-slate-400">{p.days} Days Validity ({p.months} Month{p.months > 1 ? 's' : ''})</span>
+                        <span className="font-bold text-xs sm:text-sm text-white block">{p.name}</span>
+                        <span className="text-[10px] sm:text-[11px] text-slate-400">{p.days} Days Validity ({p.months} Month{p.months > 1 ? 's' : ''})</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-amber-400">₹</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-xs sm:text-sm font-bold text-amber-400">₹</span>
                         <input
                           type="number"
                           value={p.price}
                           onChange={(e) => handlePlanPriceChange(p.id, Number(e.target.value))}
-                          className="w-28 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-black text-white text-right focus:outline-none focus:border-amber-500"
+                          className="w-24 sm:w-28 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-black text-white text-right focus:outline-none focus:border-amber-500"
                         />
                       </div>
                     </div>
@@ -701,26 +708,26 @@ export default function AdminDashboardPage() {
                 <label className="text-xs font-extrabold uppercase text-amber-400 tracking-wider block mb-2">
                   Custom Per-Day Rate (1 Din, 2 Din, 3 Din Membership ke liye):
                 </label>
-                <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-inner">
+                <div className="bg-slate-950/80 border border-slate-800 rounded-xl sm:rounded-2xl p-3 flex items-center justify-between gap-2 shadow-inner">
                   <div>
-                    <span className="font-bold text-sm text-white block">Per Day Fee (Daily Pass)</span>
-                    <span className="text-[11px] text-slate-400">Agar koi 1 din, 2 din, ya manpasand din choose karega toh is rate se calculate hoga</span>
+                    <span className="font-bold text-xs sm:text-sm text-white block">Per Day Fee (Daily Pass)</span>
+                    <span className="text-[10px] sm:text-[11px] text-slate-400">Custom din ke hisab se calculation</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-amber-400">₹</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-xs sm:text-sm font-bold text-amber-400">₹</span>
                     <input
                       type="number"
                       value={settings.customDayRate}
                       onChange={(e) => setSettings({ ...settings, customDayRate: Number(e.target.value) })}
-                      className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-black text-white text-right focus:outline-none focus:border-amber-500"
+                      className="w-20 sm:w-24 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-black text-white text-right focus:outline-none focus:border-amber-500"
                     />
-                    <span className="text-xs text-slate-400">/Day</span>
+                    <span className="text-[10px] sm:text-xs text-slate-400">/Day</span>
                   </div>
                 </div>
               </div>
 
               {/* UPI ID Configuration */}
-              <div className="pt-2 border-t border-slate-800 space-y-2">
+              <div className="pt-2 border-t border-slate-800 space-y-1.5">
                 <label className="text-xs font-extrabold uppercase text-amber-400 tracking-wider block">
                   Counter Payment UPI ID (Scan &amp; Pay):
                 </label>
@@ -729,11 +736,8 @@ export default function AdminDashboardPage() {
                   value={settings.upiId}
                   onChange={(e) => setSettings({ ...settings, upiId: e.target.value })}
                   placeholder="Ex: yourname@upi ya 9876543210@paytm"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
                 />
-                <p className="text-[10px] text-slate-500">
-                  Client jab QR scan karke pay karega, payment direct is UPI ID me receive hogi.
-                </p>
               </div>
 
               {/* Save Button */}
@@ -742,14 +746,13 @@ export default function AdminDashboardPage() {
                   type="button"
                   disabled={savingSettings}
                   onClick={handleSaveSettings}
-                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-[0.98] transition disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs sm:text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-[0.98] transition disabled:opacity-50"
                 >
-                  <Save className="w-5 h-5" />
+                  <Save className="w-4 h-4" />
                   <span>{savingSettings ? 'Saving...' : 'Save & Update Live Fees'}</span>
                 </button>
               </div>
             </div>
-
           </div>
         )}
 
@@ -757,8 +760,8 @@ export default function AdminDashboardPage() {
 
       {/* ================= MODAL 1: CLIENT QR CODE (PRINT & DOWNLOAD) ================= */}
       {showQrModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="max-w-sm w-full bg-slate-900 border border-amber-500/40 rounded-3xl p-6 text-center space-y-4 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="max-w-sm w-full bg-slate-900 border border-amber-500/40 rounded-3xl p-5 sm:p-6 text-center space-y-4 shadow-2xl relative">
             <button
               onClick={() => setShowQrModal(false)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition"
@@ -770,17 +773,17 @@ export default function AdminDashboardPage() {
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
                 Gym Counter Standee
               </span>
-              <h2 className="text-lg font-black text-white mt-2">Client QR Code</h2>
-              <p className="text-xs text-slate-400">
-                Isko print karke apne gym ke counter ya entrance par lagayein!
+              <h2 className="text-base sm:text-lg font-black text-white mt-2">Client QR Code</h2>
+              <p className="text-[11px] sm:text-xs text-slate-400">
+                Isko print karke apne gym counter ya entrance par lagayein!
               </p>
             </div>
 
             {/* Printable Frame */}
-            <div ref={printQrRef} className="bg-white p-5 rounded-3xl inline-block mx-auto border-4 border-amber-500/30 shadow-2xl">
+            <div ref={printQrRef} className="bg-white p-4 sm:p-5 rounded-3xl inline-block mx-auto border-4 border-amber-500/30 shadow-2xl">
               <QRCodeSVG
                 value={clientUrl || 'http://localhost:3000'}
-                size={220}
+                size={200}
                 level="H"
                 includeMargin={false}
               />
@@ -789,7 +792,7 @@ export default function AdminDashboardPage() {
               </p>
             </div>
 
-            <div className="text-xs text-slate-400 font-mono break-all bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+            <div className="text-[10px] sm:text-xs text-slate-400 font-mono break-all bg-slate-950 p-2 rounded-xl border border-slate-800">
               {clientUrl || 'http://localhost:3000'}
             </div>
 
@@ -798,10 +801,10 @@ export default function AdminDashboardPage() {
               <button
                 type="button"
                 onClick={handlePrintQr}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs py-2.5 sm:py-3 rounded-xl flex items-center justify-center gap-1.5 transition shadow-lg shadow-amber-500/20"
               >
                 <Printer className="w-4 h-4 stroke-[2.8]" />
-                <span>Print Standee</span>
+                <span>Print</span>
               </button>
 
               <a
@@ -809,28 +812,28 @@ export default function AdminDashboardPage() {
                 download="CityGym-Counter-QR.png"
                 target="_blank"
                 rel="noreferrer"
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-700"
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-2.5 sm:py-3 rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-700"
               >
                 <Download className="w-4 h-4" />
-                <span>Download HD</span>
+                <span>Download</span>
               </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= MODAL 2: DIRECT MEMBERSHIP ADD (JOIN MEMBERSHIP BUTTON) ================= */}
+      {/* ================= MODAL 2: DIRECT MEMBERSHIP ADD ================= */}
       {showDirectMemberModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl relative max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-amber-500 text-slate-950">
                   <UserPlus className="w-4 h-4 stroke-[2.8]" />
                 </div>
                 <div>
-                  <h3 className="font-black text-white text-base">Direct Member Entry</h3>
-                  <p className="text-xs text-slate-400">Admin counter par aate hi turant membership activate karein</p>
+                  <h3 className="font-black text-white text-sm sm:text-base">Direct Member Entry</h3>
+                  <p className="text-[10px] sm:text-xs text-slate-400">Admin counter par instant membership activate karein</p>
                 </div>
               </div>
 
@@ -842,21 +845,21 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
-            <form onSubmit={handleDirectMemberSubmit} className="space-y-3.5">
+            <form onSubmit={handleDirectMemberSubmit} className="space-y-3">
               <div>
-                <label className="text-xs text-slate-300 font-semibold block mb-1">Customer Full Name *</label>
+                <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Customer Full Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="Rahul Verma"
                   value={directName}
                   onChange={(e) => setDirectName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 font-semibold block mb-1">WhatsApp / Phone *</label>
+                <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">WhatsApp / Phone *</label>
                 <input
                   type="tel"
                   required
@@ -864,53 +867,53 @@ export default function AdminDashboardPage() {
                   placeholder="9876543210"
                   value={directPhone}
                   onChange={(e) => setDirectPhone(e.target.value.replace(/\D/g, ''))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-xs text-slate-300 font-semibold block mb-1">Age</label>
+                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Age</label>
                   <input
                     type="number"
                     placeholder="24"
                     value={directAge}
                     onChange={(e) => setDirectAge(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-300 font-semibold block mb-1">Weight (KG)</label>
+                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Weight (KG)</label>
                   <input
                     type="number"
                     placeholder="70"
                     value={directWeight}
                     onChange={(e) => setDirectWeight(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 font-semibold block mb-1">Start Date</label>
+                <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Start Date</label>
                 <input
                   type="date"
                   value={directStartDate}
                   onChange={(e) => setDirectStartDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-amber-500 [color-scheme:dark]"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-500 [color-scheme:dark]"
                 />
               </div>
 
               {/* Plan Picker */}
               <div>
-                <label className="text-xs text-slate-300 font-semibold block mb-1.5">Select Plan</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1.5">Select Plan</label>
+                <div className="grid grid-cols-2 gap-1.5">
                   {settings?.plans.map(p => (
                     <button
                       type="button"
                       key={p.id}
                       onClick={() => { setDirectPlanId(p.id); setDirectIsCustom(false); }}
-                      className={`text-left p-2.5 rounded-xl border text-xs transition ${
+                      className={`text-left p-2 rounded-xl border text-[11px] sm:text-xs transition ${
                         !directIsCustom && directPlanId === p.id
                           ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
                           : 'bg-slate-950 border-slate-800 text-slate-400'
@@ -923,7 +926,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* Custom Days */}
-                <div className="mt-2 flex items-center justify-between p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs">
+                <div className="mt-2 flex items-center justify-between p-2 rounded-xl border border-slate-800 bg-slate-950 text-xs">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -931,7 +934,7 @@ export default function AdminDashboardPage() {
                       onChange={(e) => setDirectIsCustom(e.target.checked)}
                       className="rounded text-amber-500"
                     />
-                    <span className="text-slate-300">Custom Days (₹{settings?.customDayRate || 50}/day)</span>
+                    <span className="text-slate-300 text-[11px]">Custom (₹{settings?.customDayRate || 50}/day)</span>
                   </label>
                   {directIsCustom && (
                     <input
@@ -939,15 +942,15 @@ export default function AdminDashboardPage() {
                       min={1}
                       value={directCustomDays}
                       onChange={(e) => setDirectCustomDays(Math.max(1, Number(e.target.value)))}
-                      className="w-16 bg-slate-900 border border-slate-700 rounded-lg text-center text-amber-400 font-bold py-1"
+                      className="w-14 bg-slate-900 border border-slate-700 rounded-lg text-center text-amber-400 font-bold py-1 text-xs"
                     />
                   )}
                 </div>
               </div>
 
-              {/* Payment Mode (Cash / Counter UPI) */}
+              {/* Payment Mode */}
               <div>
-                <label className="text-xs text-slate-300 font-semibold block mb-1">Counter Payment Received In:</label>
+                <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Payment Received In:</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['CASH', 'UPI', 'CARD'] as const).map(mode => (
                     <button
@@ -970,10 +973,10 @@ export default function AdminDashboardPage() {
                 <button
                   type="submit"
                   disabled={directIsSubmitting}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs sm:text-sm py-3 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition disabled:opacity-50"
                 >
                   <CheckCircle className="w-4 h-4 stroke-[2.8]" />
-                  <span>{directIsSubmitting ? 'Adding & Activating...' : 'Add & Activate Membership Now'}</span>
+                  <span>{directIsSubmitting ? 'Adding...' : 'Add & Activate Membership'}</span>
                 </button>
               </div>
             </form>

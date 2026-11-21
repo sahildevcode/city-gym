@@ -17,76 +17,91 @@ export interface Member {
   utrNumber?: string;
   createdAt: string;
   wantsDiet: boolean;
-  dietPlan?: {
-    goal: string;
-    foodType: 'veg' | 'non-veg' | 'egg';
-    meals: {
-      timing: string;
-      title: string;
-      items: string[];
-      notes?: string;
-    }[];
-    calorieTarget: string;
-    waterIntake: string;
-    tips: string[];
-  };
 }
 
-const dataFilePath = path.join(process.cwd(), 'data', 'members.json');
+// In-Memory store for Serverless (Netlify/Vercel/Cloud)
+let memoryMembers: Member[] = [];
 
-// Ensure directory exists
+// Fallback to /tmp on serverless environments where local disk is read-only
+const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const dataFilePath = isServerless 
+  ? path.join('/tmp', 'members.json')
+  : path.join(process.cwd(), 'data', 'members.json');
+
 function ensureFile() {
-  const dir = path.dirname(dataFilePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(dataFilePath)) {
-    fs.writeFileSync(dataFilePath, JSON.stringify([], null, 2), 'utf-8');
+  try {
+    const dir = path.dirname(dataFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(dataFilePath)) {
+      fs.writeFileSync(dataFilePath, JSON.stringify(memoryMembers, null, 2), 'utf-8');
+    }
+  } catch (e) {
+    // Silently fall back to memory store on serverless
+    console.warn('File system read-only, using in-memory store:', e);
   }
 }
 
 export function getAllMembers(): Member[] {
-  ensureFile();
   try {
-    const raw = fs.readFileSync(dataFilePath, 'utf-8');
-    return JSON.parse(raw);
+    ensureFile();
+    if (fs.existsSync(dataFilePath)) {
+      const raw = fs.readFileSync(dataFilePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryMembers = parsed;
+      }
+    }
   } catch (error) {
-    console.error('Error reading members:', error);
-    return [];
+    console.error('Reading from memory store:', error);
   }
+  return memoryMembers;
 }
 
 export function saveMember(member: Member): void {
-  ensureFile();
-  const members = getAllMembers();
-  const existingIndex = members.findIndex(m => m.id === member.id);
+  const existingIndex = memoryMembers.findIndex(m => m.id === member.id);
   if (existingIndex >= 0) {
-    members[existingIndex] = member;
+    memoryMembers[existingIndex] = member;
   } else {
-    members.unshift(member);
+    memoryMembers.unshift(member);
   }
-  fs.writeFileSync(dataFilePath, JSON.stringify(members, null, 2), 'utf-8');
+
+  try {
+    ensureFile();
+    fs.writeFileSync(dataFilePath, JSON.stringify(memoryMembers, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('Wrote to memory store (Serverless read-only disk):', e);
+  }
 }
 
 export function updateMemberStatus(id: string, status: 'pending' | 'verified' | 'rejected'): Member | null {
-  ensureFile();
-  const members = getAllMembers();
-  const member = members.find(m => m.id === id);
+  getAllMembers();
+  const member = memoryMembers.find(m => m.id === id);
   if (member) {
     member.paymentStatus = status;
-    fs.writeFileSync(dataFilePath, JSON.stringify(members, null, 2), 'utf-8');
+    try {
+      ensureFile();
+      fs.writeFileSync(dataFilePath, JSON.stringify(memoryMembers, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('Updated in memory store:', e);
+    }
     return member;
   }
   return null;
 }
 
 export function deleteMember(id: string): boolean {
-  ensureFile();
-  let members = getAllMembers();
-  const initialLen = members.length;
-  members = members.filter(m => m.id !== id);
-  if (members.length !== initialLen) {
-    fs.writeFileSync(dataFilePath, JSON.stringify(members, null, 2), 'utf-8');
+  getAllMembers();
+  const initialLen = memoryMembers.length;
+  memoryMembers = memoryMembers.filter(m => m.id !== id);
+  if (memoryMembers.length !== initialLen) {
+    try {
+      ensureFile();
+      fs.writeFileSync(dataFilePath, JSON.stringify(memoryMembers, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('Deleted in memory store:', e);
+    }
     return true;
   }
   return false;

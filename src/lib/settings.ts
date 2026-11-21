@@ -18,11 +18,11 @@ export interface GymSettings {
   merchantName: string;
   adminPin: string;
   customDayRate: number;
-  qrImageUrl?: string; // Admin uploaded static/custom scanner QR code image
+  qrImageUrl?: string;
   plans: Plan[];
 }
 
-const defaultSettings: GymSettings = {
+let defaultSettings: GymSettings = {
   gymName: 'CITY GYM & FITNESS CLUB',
   tagline: 'Transform Your Body, Elevate Your Mind',
   contactPhone: '+91 98765 43210',
@@ -39,33 +39,45 @@ const defaultSettings: GymSettings = {
   ]
 };
 
-const settingsFilePath = path.join(process.cwd(), 'data', 'settings.json');
+const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const settingsFilePath = isServerless
+  ? path.join('/tmp', 'settings.json')
+  : path.join(process.cwd(), 'data', 'settings.json');
 
 function ensureSettingsFile() {
-  const dir = path.dirname(settingsFilePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(settingsFilePath)) {
-    fs.writeFileSync(settingsFilePath, JSON.stringify(defaultSettings, null, 2), 'utf-8');
+  try {
+    const dir = path.dirname(settingsFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(settingsFilePath)) {
+      fs.writeFileSync(settingsFilePath, JSON.stringify(defaultSettings, null, 2), 'utf-8');
+    }
+  } catch (e) {
+    console.warn('Settings using in-memory store:', e);
   }
 }
 
 export function getGymSettings(): GymSettings {
-  ensureSettingsFile();
   try {
-    const raw = fs.readFileSync(settingsFilePath, 'utf-8');
-    return JSON.parse(raw);
+    ensureSettingsFile();
+    if (fs.existsSync(settingsFilePath)) {
+      const raw = fs.readFileSync(settingsFilePath, 'utf-8');
+      defaultSettings = JSON.parse(raw);
+    }
   } catch (error) {
-    console.error('Error reading settings:', error);
-    return defaultSettings;
+    console.warn('Error reading settings file, using memory:', error);
   }
+  return defaultSettings;
 }
 
 export function updateGymSettings(newSettings: Partial<GymSettings>): GymSettings {
-  ensureSettingsFile();
-  const current = getGymSettings();
-  const updated = { ...current, ...newSettings };
-  fs.writeFileSync(settingsFilePath, JSON.stringify(updated, null, 2), 'utf-8');
-  return updated;
+  defaultSettings = { ...defaultSettings, ...newSettings };
+  try {
+    ensureSettingsFile();
+    fs.writeFileSync(settingsFilePath, JSON.stringify(defaultSettings, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('Saved settings to memory store:', e);
+  }
+  return defaultSettings;
 }

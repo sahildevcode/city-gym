@@ -100,7 +100,7 @@ export function generateCustomDietPlan(req: DietRequest) {
 
   // Pre-Workout Snack
   meals.push({
-    timing: '05:00 PM (45 min before City Gym workout)',
+    timing: '05:00 PM (45 min before Indian Health Club workout)',
     title: 'Pre-Workout Fuel',
     items: [
       '1 medium banana + 1 tablespoon peanut butter',
@@ -142,7 +142,7 @@ export function generateCustomDietPlan(req: DietRequest) {
     'Drink at least 500ml water as soon as you wake up.',
     'Strictly avoid refined sugar, sodas, and oily roadside fried foods.',
     'Aim for 7-8 hours of sound sleep every night for maximum growth hormones.',
-    'Always warmup 5 minutes before weight training at City Gym.',
+    'Always warmup 5 minutes before weight training at Indian Health Club.',
     'Consistency in training 4-5 days a week is key to seeing visible changes!'
   ];
 

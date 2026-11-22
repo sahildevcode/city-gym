@@ -27,7 +27,9 @@ import {
   Download,
   X,
   UserPlus,
-  Calendar
+  Calendar,
+  LogOut,
+  Edit2
 } from 'lucide-react';
 import { gsap } from 'gsap';
 import { GymSettings, Plan } from '@/lib/settings';
@@ -68,7 +70,10 @@ export default function AdminDashboardPage() {
   const [directPlanId, setDirectPlanId] = useState('1m');
   const [directCustomDays, setDirectCustomDays] = useState(30);
   const [directIsCustom, setDirectIsCustom] = useState(false);
-  const [directPaymentMode, setDirectPaymentMode] = useState<'CASH' | 'UPI' | 'CARD'>('CASH');
+  const [directPaymentMode, setDirectPaymentMode] = useState<'CASH' | 'UPI'>('CASH');
+  const [showCounterUpiModal, setShowCounterUpiModal] = useState<{ open: boolean; amount: number; name: string; memberId: string } | null>(null);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
   const [directIsSubmitting, setDirectIsSubmitting] = useState(false);
 
   const [clientUrl, setClientUrl] = useState('');
@@ -109,7 +114,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const savedPin = sessionStorage.getItem('city_gym_admin_auth');
-    if (savedPin === '1234') {
+    if (savedPin === '8299' || (settings && savedPin === settings.adminPin)) {
       setIsAuthenticated(true);
       fetchMembers();
       fetchSettings();
@@ -128,7 +133,7 @@ export default function AdminDashboardPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput === '1234' || (settings && pinInput === settings.adminPin)) {
+    if (pinInput === '8299' || (settings && pinInput === settings.adminPin)) {
       setIsAuthenticated(true);
       sessionStorage.setItem('city_gym_admin_auth', pinInput);
       setPinError(false);
@@ -139,7 +144,13 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleUpdateStatus = async (id: string, status: 'verified' | 'rejected') => {
+  const handleLogout = () => {
+    sessionStorage.removeItem('city_gym_admin_auth');
+    setIsAuthenticated(false);
+    setPinInput('');
+  };
+
+  const handleUpdateStatus = async (id: string, status: 'verified' | 'rejected' | 'pending') => {
     setActionLoading(id);
     try {
       const res = await fetch('/api/members', {
@@ -166,6 +177,9 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         setMembers(prev => prev.filter(m => m.id !== id));
+        fetchMembers(); // Re-sync directly with database
+      } else {
+        alert('Delete failed: ' + (data.error || 'Server error'));
       }
     } catch {
       alert('Delete failed');
@@ -177,8 +191,8 @@ export default function AdminDashboardPage() {
   const sendWhatsAppReminder = (member: Member) => {
     const isPending = member.paymentStatus === 'pending';
     const text = isPending
-      ? `Namaste ${member.name} ji! City Gym me aapka swagat hai. Aapka membership form receive hua hai jisme ₹${member.amount} ka payment verify hona baaki hai. Kripya counter par confirm karein.`
-      : `Namaste ${member.name} ji! City Gym me aapki membership ${member.endDate} ko expire ho rahi hai. Regular fitness ke liye kripya apna plan renew karwayein. - City Gym`;
+      ? `Namaste ${member.name} ji! Indian Health Club me aapka swagat hai. Aapka membership form receive hua hai jisme ₹${member.amount} ka payment verify hona baaki hai. Kripya counter par confirm karein.`
+      : `Namaste ${member.name} ji! Indian Health Club me aapki membership ${member.endDate} ko expire ho rahi hai. Regular fitness ke liye kripya apna plan renew karwayein. - Indian Health Club`;
 
     const url = `https://wa.me/91${member.phone}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
@@ -262,12 +276,27 @@ export default function AdminDashboardPage() {
 
       const result = await res.json();
       if (result.success) {
-        await handleUpdateStatus(result.data.id, 'verified');
-        alert(`Success! ${directName} ki membership add ho gayi (ID: ${result.data.id})`);
-        setShowDirectMemberModal(false);
-        setDirectName('');
-        setDirectPhone('');
-        fetchMembers();
+        if (directPaymentMode === 'UPI') {
+          // If UPI, keep member pending and open Counter UPI QR modal
+          setShowDirectMemberModal(false);
+          setDirectName('');
+          setDirectPhone('');
+          fetchMembers();
+          setShowCounterUpiModal({
+            open: true,
+            amount,
+            name: directName,
+            memberId: result.data.id
+          });
+        } else {
+          // Cash mode: direct verify
+          await handleUpdateStatus(result.data.id, 'verified');
+          alert(`Success! ${directName} ki membership add ho gayi (ID: ${result.data.id})`);
+          setShowDirectMemberModal(false);
+          setDirectName('');
+          setDirectPhone('');
+          fetchMembers();
+        }
       } else {
         alert('Failed: ' + result.error);
       }
@@ -275,6 +304,31 @@ export default function AdminDashboardPage() {
       alert('Error occurred while adding member');
     } finally {
       setDirectIsSubmitting(false);
+    }
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch('/api/members', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingMember)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member updated successfully!');
+        setEditingMember(null);
+        fetchMembers();
+      } else {
+        alert('Update failed: ' + data.error);
+      }
+    } catch {
+      alert('Error updating member');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -320,7 +374,7 @@ export default function AdminDashboardPage() {
               OWNER PORTAL LOGIN
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              City Gym mobile &amp; counter management dashboard
+              Indian Health Club mobile &amp; counter management dashboard
             </p>
           </div>
 
@@ -336,7 +390,7 @@ export default function AdminDashboardPage() {
                 className="w-40 text-center tracking-[0.6em] text-3xl font-black bg-slate-950/80 border border-slate-800 rounded-2xl py-3 text-amber-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 mx-auto shadow-inner"
               />
               {pinError && (
-                <p className="text-xs text-red-400 mt-2 font-bold animate-bounce">Galat PIN! Default PIN: 1234</p>
+                <p className="text-xs text-red-400 mt-2 font-bold animate-bounce">Galat PIN! Kripya sahi PIN darj karein.</p>
               )}
             </div>
 
@@ -346,10 +400,6 @@ export default function AdminDashboardPage() {
             >
               Open Dashboard
             </button>
-
-            <p className="text-[11px] text-slate-500">
-              Default Master PIN: <strong className="text-amber-400">1234</strong>
-            </p>
           </form>
         </div>
       </div>
@@ -375,7 +425,7 @@ export default function AdminDashboardPage() {
               <div>
                 <div className="flex items-center gap-1.5">
                   <h1 className="font-black text-xs sm:text-sm tracking-wider text-white uppercase font-['Cabinet_Grotesk',sans-serif]">
-                    CITY GYM ADMIN
+                    INDIAN HEALTH CLUB ADMIN
                   </h1>
                   <span className="text-[8px] sm:text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded-full font-black">
                     LIVE
@@ -421,6 +471,16 @@ export default function AdminDashboardPage() {
             >
               <UserPlus className="w-3.5 h-3.5 stroke-[2.8] shrink-0" />
               <span>+ Join Member</span>
+            </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              title="Logout from Admin"
+              className="p-2 sm:p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 transition shrink-0 flex items-center gap-1"
+            >
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline text-xs font-bold">Logout</span>
             </button>
           </div>
         </div>
@@ -627,7 +687,7 @@ export default function AdminDashboardPage() {
                         </button>
 
                         <div className="flex items-center gap-1.5">
-                          {m.paymentStatus !== 'verified' && (
+                          {m.paymentStatus !== 'verified' ? (
                             <button
                               disabled={actionLoading === m.id}
                               onClick={() => handleUpdateStatus(m.id, 'verified')}
@@ -636,7 +696,25 @@ export default function AdminDashboardPage() {
                               <CheckCircle className="w-3.5 h-3.5 stroke-[2.8]" />
                               <span>Approve</span>
                             </button>
+                          ) : (
+                            <button
+                              disabled={actionLoading === m.id}
+                              onClick={() => handleUpdateStatus(m.id, 'pending')}
+                              title="Mark back to Pending"
+                              className="text-[10px] sm:text-[11px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-1.5 rounded-xl font-bold flex items-center gap-1 transition"
+                            >
+                              <span>Set Pending</span>
+                            </button>
                           )}
+
+                          {/* Edit Member Button */}
+                          <button
+                            onClick={() => setEditingMember({ ...m })}
+                            className="p-1.5 sm:p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-amber-500/20 hover:border-amber-500/30 text-slate-400 hover:text-amber-400 transition"
+                            title="Edit Member Details"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
 
                           <button
                             onClick={() => handleDeleteMember(m.id, m.name)}
@@ -740,6 +818,66 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
+              {/* QR Image URL or Upload */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <label className="text-xs font-extrabold uppercase text-amber-400 tracking-wider block">
+                  Custom UPI QR Image (Upload QR Image ya URL):
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={settings.qrImageUrl || ''}
+                    onChange={(e) => setSettings({ ...settings, qrImageUrl: e.target.value })}
+                    placeholder="https://... ya niche se image file chunein"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
+                  />
+                  {settings.qrImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setSettings({ ...settings, qrImageUrl: '' })}
+                      className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-bold border border-red-500/20"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="qr-file-input"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setSettings({ ...settings, qrImageUrl: reader.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="qr-file-input"
+                    className="cursor-pointer bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-400 text-xs font-bold py-2 px-3.5 rounded-xl inline-flex items-center gap-1.5 transition"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>Upload QR Image From Device</span>
+                  </label>
+                </div>
+
+                {settings.qrImageUrl ? (
+                  <div className="mt-2 p-2 bg-slate-950 border border-slate-800 rounded-xl inline-block">
+                    <p className="text-[10px] text-slate-400 mb-1">Live QR Preview:</p>
+                    <img src={settings.qrImageUrl} alt="QR Preview" className="w-32 h-32 object-contain rounded-lg bg-white p-1" />
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500">Agar QR upload nahi karenge toh aapke UPI ID ka dynamic QR auto-generate hota rahega.</p>
+                )}
+              </div>
+
               {/* Save Button */}
               <div className="pt-2">
                 <button
@@ -788,7 +926,7 @@ export default function AdminDashboardPage() {
                 includeMargin={false}
               />
               <p className="text-[10px] font-extrabold text-slate-950 uppercase tracking-widest mt-2">
-                ⚡ SCAN TO JOIN CITY GYM
+                ⚡ SCAN TO JOIN INDIAN HEALTH CLUB
               </p>
             </div>
 
@@ -951,8 +1089,8 @@ export default function AdminDashboardPage() {
               {/* Payment Mode */}
               <div>
                 <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Payment Received In:</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['CASH', 'UPI', 'CARD'] as const).map(mode => (
+                <div className="grid grid-cols-2 gap-2">
+                  {(['CASH', 'UPI'] as const).map(mode => (
                     <button
                       type="button"
                       key={mode}
@@ -963,7 +1101,7 @@ export default function AdminDashboardPage() {
                           : 'bg-slate-950 border-slate-800 text-slate-400'
                       }`}
                     >
-                      {mode}
+                      {mode === 'CASH' ? '💵 Cash' : '📱 Counter UPI QR'}
                     </button>
                   ))}
                 </div>
@@ -976,7 +1114,197 @@ export default function AdminDashboardPage() {
                   className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs sm:text-sm py-3 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition disabled:opacity-50"
                 >
                   <CheckCircle className="w-4 h-4 stroke-[2.8]" />
-                  <span>{directIsSubmitting ? 'Adding...' : 'Add & Activate Membership'}</span>
+                  <span>
+                    {directIsSubmitting 
+                      ? 'Adding...' 
+                      : directPaymentMode === 'UPI' 
+                      ? 'Proceed to UPI QR Screen' 
+                      : 'Add & Activate Cash Membership'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL 3: COUNTER UPI QR POPUP ================= */}
+      {showCounterUpiModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="max-w-sm w-full bg-slate-900 border border-amber-500/30 rounded-3xl p-5 text-center space-y-4 shadow-2xl relative">
+            <button
+              onClick={() => setShowCounterUpiModal(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div>
+              <span className="text-[10px] font-black text-slate-950 uppercase tracking-widest bg-gradient-to-r from-amber-400 to-orange-400 px-3 py-1 rounded-full shadow-md">
+                SCAN &amp; PAY ₹{showCounterUpiModal.amount.toLocaleString('en-IN')}
+              </span>
+              <h3 className="font-black text-white text-base mt-2">{showCounterUpiModal.name}</h3>
+              <p className="text-[11px] text-slate-400">ID: {showCounterUpiModal.memberId}</p>
+            </div>
+
+            {/* QR View */}
+            <div className="p-3 bg-white rounded-2xl inline-block shadow-2xl border-2 border-amber-500/30 mx-auto">
+              {settings?.qrImageUrl ? (
+                <img
+                  src={settings.qrImageUrl}
+                  alt="UPI QR"
+                  className="w-[200px] h-[200px] object-contain rounded-xl mx-auto"
+                />
+              ) : (
+                <QRCodeSVG
+                  value={`upi://pay?pa=${encodeURIComponent(settings?.upiId || 'indianhealthclub@upi')}&pn=Indian%20Health%20Club&am=${showCounterUpiModal.amount}&cu=INR`}
+                  size={200}
+                  level="H"
+                />
+              )}
+            </div>
+
+            <p className="text-xs text-slate-300 font-medium">
+              Client ko scan karwayein aur payment check karein:
+            </p>
+
+            {/* Single Action Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCounterUpiModal(null);
+                  fetchMembers();
+                }}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-[0.98] transition"
+              >
+                <Check className="w-4 h-4 stroke-[3]" />
+                <span>Done (Pending Verification me Save Ho Gaya)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL 4: EDIT MEMBER POPUP ================= */}
+      {editingMember && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-500 text-slate-950">
+                  <Edit2 className="w-4 h-4 stroke-[2.8]" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-sm sm:text-base">Edit Member Record</h3>
+                  <p className="text-[10px] sm:text-xs text-slate-400">ID: {editingMember.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingMember(null)}
+                className="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-3">
+              <div>
+                <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editingMember.name}
+                  onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Mobile (+91)</label>
+                <input
+                  type="tel"
+                  required
+                  value={editingMember.phone}
+                  onChange={(e) => setEditingMember({ ...editingMember, phone: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Age</label>
+                  <input
+                    type="number"
+                    value={editingMember.age || ''}
+                    onChange={(e) => setEditingMember({ ...editingMember, age: Number(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Weight (KG)</label>
+                  <input
+                    type="number"
+                    value={editingMember.weight || ''}
+                    onChange={(e) => setEditingMember({ ...editingMember, weight: Number(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={editingMember.startDate}
+                    onChange={(e) => setEditingMember({ ...editingMember, startDate: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white [color-scheme:dark]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">End / Expiry Date</label>
+                  <input
+                    type="date"
+                    value={editingMember.endDate}
+                    onChange={(e) => setEditingMember({ ...editingMember, endDate: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={editingMember.amount}
+                    onChange={(e) => setEditingMember({ ...editingMember, amount: Number(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold block mb-1">Payment Status</label>
+                  <select
+                    value={editingMember.paymentStatus}
+                    onChange={(e) => setEditingMember({ ...editingMember, paymentStatus: e.target.value as any })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white font-bold"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="verified">Verified</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={editSaving}
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs sm:text-sm py-3 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-[0.98] transition disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{editSaving ? 'Saving Changes...' : 'Save & Update Member'}</span>
                 </button>
               </div>
             </form>

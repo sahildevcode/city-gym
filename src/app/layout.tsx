@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'CITY GYM & FITNESS CLUB - Smart Instant Membership',
+  title: 'INDIAN HEALTH CLUB - Smart Instant Membership',
   description: 'Scan & Onboard Instant Gym Membership with AI Diet Generator and Counter UPI QR.',
 };
 

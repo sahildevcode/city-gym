@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getAllMembers, saveMember, updateMemberStatus, deleteMember, Member } from '@/lib/db';
+import { getAllMembersAsync, saveMemberAsync, updateMemberStatusAsync, updateMemberDetailsAsync, deleteMemberAsync, Member } from '@/lib/db';
 import { generateCustomDietPlan } from '@/lib/dietGenerator';
 
 // GET all members (for admin dashboard)
 export async function GET() {
   try {
-    const members = getAllMembers();
+    const members = await getAllMembersAsync();
     return NextResponse.json({ success: true, data: members });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -56,38 +56,70 @@ export async function POST(request: Request) {
     }
 
     const newMember: Member = {
-      id: 'CG-' + Math.floor(100000 + Math.random() * 900000),
+      id: 'IHC-' + Math.floor(100000 + Math.random() * 900000),
       name,
       phone,
-      age: Number(age) || 20,
-      weight: Number(weight) || 65,
+      age: Number(age) || 0,
+      weight: Number(weight) || 0,
       startDate,
-      durationMonths: Number(durationMonths) || 1,
+      durationMonths: Number(durationMonths) || 0,
       durationDays: Number(durationDays) || 30,
       endDate,
       amount: Number(amount),
       paymentMethod,
-      paymentStatus: 'pending', // Pending until Admin verifies payment on their phone dashboard
+      paymentStatus: paymentMethod === 'CASH' ? 'pending' : (utrNumber ? 'pending' : 'verified'),
       utrNumber,
       createdAt: new Date().toISOString(),
-      wantsDiet: !!wantsDiet,
-      dietPlan
+      wantsDiet: Boolean(wantsDiet)
     };
 
-    saveMember(newMember);
+    await saveMemberAsync(newMember);
 
     return NextResponse.json({
       success: true,
-      message: 'Registration successful! Verification pending.',
-      data: newMember
+      message: 'Member registered successfully',
+      data: newMember,
+      dietPlan: dietPlan
     });
+
   } catch (error: any) {
-    console.error('Registration API error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-// PATCH to update payment status (Admin verify / reject)
+// PUT - update member full details (Edit option)
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, name, phone, age, weight, startDate, endDate, amount, paymentStatus, paymentMethod } = body;
+
+    if (!id || !name || !phone) {
+      return NextResponse.json({ success: false, error: 'ID, name and phone are required' }, { status: 400 });
+    }
+
+    const updated = await updateMemberDetailsAsync(id, {
+      name,
+      phone,
+      age: Number(age) || 0,
+      weight: Number(weight) || 0,
+      startDate,
+      endDate,
+      amount: Number(amount) || 0,
+      paymentStatus,
+      paymentMethod
+    });
+
+    if (!updated) {
+      return NextResponse.json({ success: false, error: 'Member not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// PATCH - update payment status (verify/reject)
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
@@ -97,7 +129,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Invalid parameters' }, { status: 400 });
     }
 
-    const updated = updateMemberStatus(id, status);
+    const updated = await updateMemberStatusAsync(id, status);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Member not found' }, { status: 404 });
     }
@@ -118,8 +150,8 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 });
     }
 
-    const success = deleteMember(id);
-    return NextResponse.json({ success });
+    const deleted = await deleteMemberAsync(id);
+    return NextResponse.json({ success: deleted });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

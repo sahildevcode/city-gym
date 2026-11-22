@@ -23,14 +23,14 @@ export interface GymSettings {
 }
 
 let defaultSettings: GymSettings = {
-  gymName: 'CITY GYM & FITNESS CLUB',
+  gymName: 'INDIAN HEALTH CLUB',
   tagline: 'Transform Your Body, Elevate Your Mind',
   contactPhone: '+91 98765 43210',
-  upiId: 'citygym@upi',
-  merchantName: 'City Gym Fitness Club',
-  adminPin: '1234',
-  customDayRate: 50,
-  qrImageUrl: '',
+  upiId: 'indianhealthclub@upi',
+  merchantName: 'Indian Health Club',
+  adminPin: '8299',
+  customDayRate: 20,
+  qrImageUrl: '/gym-qr.png',
   plans: [
     { id: '1m', name: '1 Month Membership', months: 1, days: 30, price: 1000, popular: false },
     { id: '3m', name: '3 Months Membership', months: 3, days: 90, price: 2500, popular: true },

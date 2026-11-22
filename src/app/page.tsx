@@ -48,6 +48,8 @@ export default function MemberRegistrationPage() {
   const [utrNumber, setUtrNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredMember, setRegisteredMember] = useState<any>(null);
+  const [timerSeconds, setTimerSeconds] = useState(12);
+  const [canShowDone, setCanShowDone] = useState(false);
 
   // Fetch Admin Settings
   useEffect(() => {
@@ -77,13 +79,29 @@ export default function MemberRegistrationPage() {
     return () => ctx.revert();
   }, []);
 
-  // Animate on step change
+  // Animate on step change and handle Payment timer
   useEffect(() => {
     if (step === 'payment' || step === 'success') {
       gsap.fromTo('.gsap-step-view', 
         { opacity: 0, y: 30, scale: 0.98 },
         { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: 'power3.out' }
       );
+    }
+
+    if (step === 'payment') {
+      setTimerSeconds(12);
+      setCanShowDone(false);
+      const interval = setInterval(() => {
+        setTimerSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setCanShowDone(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
     }
   }, [step]);
 
@@ -128,7 +146,7 @@ export default function MemberRegistrationPage() {
   };
 
   const activeUpiId = settings?.upiId || 'citygym@upi';
-  const activeMerchant = settings?.merchantName || 'City Gym Fitness Club';
+  const activeMerchant = settings?.merchantName || 'Indian Health Club Fitness Club';
   const upiUri = `upi://pay?pa=${activeUpiId}&pn=${encodeURIComponent(activeMerchant)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent(`CityGym-${name.substring(0, 10)}`)}`;
 
   const handleFinalSubmit = async () => {
@@ -192,7 +210,7 @@ export default function MemberRegistrationPage() {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-black text-sm tracking-widest uppercase text-white font-['Cabinet_Grotesk',sans-serif]">
-                  {settings?.gymName || 'CITY GYM'}
+                  {settings?.gymName || 'INDIAN HEALTH CLUB'}
                 </span>
                 <span className="text-[9px] font-black bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 px-1.5 py-0.2 rounded-md uppercase tracking-wider">
                   CLUB
@@ -453,7 +471,7 @@ export default function MemberRegistrationPage() {
                 <ArrowRight className="w-5 h-5 stroke-[2.8]" />
               </button>
               <p className="text-center text-[10px] text-slate-400 mt-2 font-medium">
-                🔒 Safe &amp; Direct Counter UPI Payment at City Gym
+                🔒 Safe &amp; Direct Counter UPI Payment at Indian Health Club
               </p>
             </div>
           </form>
@@ -500,7 +518,7 @@ export default function MemberRegistrationPage() {
                   // Admin Uploaded Exact QR Image
                   <img
                     src={settings.qrImageUrl}
-                    alt="City Gym Payment QR"
+                    alt="Indian Health Club Payment QR"
                     className="w-[210px] h-[210px] object-contain rounded-2xl mx-auto"
                   />
                 ) : (
@@ -555,15 +573,27 @@ export default function MemberRegistrationPage() {
 
             {/* Action CTA */}
             <div className="space-y-2 pt-1">
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleFinalSubmit}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm py-4 px-4 rounded-2xl flex items-center justify-center gap-2 shadow-2xl shadow-emerald-500/25 active:scale-[0.98] transition disabled:opacity-50"
-              >
-                <CheckCircle2 className="w-5 h-5 stroke-[2.8]" />
-                <span>{isSubmitting ? 'Verifying & Saving...' : 'Maine Payment Kar Diya (Done)'}</span>
-              </button>
+              {!canShowDone ? (
+                <div className="w-full bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 text-center space-y-1 shadow-lg animate-pulse">
+                  <div className="flex items-center justify-center gap-2 text-amber-400 font-bold text-xs">
+                    <Clock className="w-4 h-4 animate-spin" />
+                    <span>UPI App se payment poora karein...</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    &apos;Payment Done&apos; button <strong className="text-amber-400 font-black">{timerSeconds}s</strong> me yahan unlock hoga
+                  </p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleFinalSubmit}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm py-4 px-4 rounded-2xl flex items-center justify-center gap-2 shadow-2xl shadow-emerald-500/25 active:scale-[0.98] transition disabled:opacity-50 animate-in zoom-in-95 duration-200"
+                >
+                  <CheckCircle2 className="w-5 h-5 stroke-[2.8]" />
+                  <span>{isSubmitting ? 'Verifying & Saving...' : 'Maine Payment Kar Diya (Done)'}</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -590,7 +620,7 @@ export default function MemberRegistrationPage() {
                 Swagat Hai, {registeredMember.name}!
               </h2>
               <p className="text-xs text-slate-300">
-                Aapka registration City Gym me safaltapoorvak ho gaya hai.
+                Aapka registration Indian Health Club me safaltapoorvak ho gaya hai.
               </p>
 
               {/* Digital Slip */}
